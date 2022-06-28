@@ -1,5 +1,7 @@
 (* This is the main entry-point for the service. *)
 
+open Deployer
+
 type flavour_opt =
   | Tarides of Uri.t
   | OCaml of Uri.t

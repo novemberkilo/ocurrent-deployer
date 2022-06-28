@@ -2,6 +2,8 @@
 
 (* A low-security Docker Hub user used to push images to the staging area.
    Low-security because we never rely on the tags in this repository, just the hashes. *)
+open Deployer
+
 let staging_user = "ocurrentbuilder"
 
 (* Placeholder webhook_secret, when running in local mode. *)
