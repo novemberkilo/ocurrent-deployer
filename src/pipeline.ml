@@ -82,7 +82,7 @@ module Packet_unikernel = struct
       ~pull:true
       ~timeout
 
-  let build info ?additional_build_args:_ src  = Current.ignore_value (build_image info src)
+  let build info ?additional_build_args:_ (_:Github.Repo_id.t) src  = Current.ignore_value (build_image info src)
 
   let name { service } = service
 
@@ -152,14 +152,29 @@ module Cluster = struct
     services : service list;
   }
 
+  let get_job_id x =
+    let+ md = Current.Analysis.metadata x in
+    match md with
+    | Some { Current.Metadata.job_id; _ } -> job_id
+    | None -> None
+
   (* Build [src/dockerfile] as a Docker service. *)
-  let build { sched; dockerfile; options; archs } ?(additional_build_args=Current.return []) src =
-    let src = Current.map (fun x -> [x]) src in
+  let build { sched; dockerfile; options; archs } ?(additional_build_args=Current.return []) repo src : unit Current.t =
+    let src' = Current.map (fun x -> [x]) src in
+    let* src = src in
+    let hash = Current_git.Commit_id.hash src in
     Current.component "HEADs" |>
     let** additional_build_args = additional_build_args in
     let options = { options with build_args = additional_build_args @ options.build_args } in
-    let build_arch arch = Current_ocluster.build sched ~options ~pool:(pool_id arch) ~src dockerfile in
-    Current.all (List.map build_arch archs)
+    let build_arch arch = 
+      let build = Current_ocluster.build sched ~options ~pool:(pool_id arch) ~src:src' dockerfile
+      in 
+      let+ job_id = get_job_id build in
+      Index.record ~repo ~hash [job_id];
+      let job_str = match job_id with | Some x -> x | None -> "None" in
+      Logs.info (fun f -> f "Recording repo: %s hash: %s job: %s" (Fmt.str("%s/%s") repo.owner repo.name) hash job_str)
+    in
+    Current.all (List.map build_arch archs) 
 
   let name info = Cluster_api.Docker.Image_id.to_string info.hub_id
 

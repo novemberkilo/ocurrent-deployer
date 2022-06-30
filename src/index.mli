@@ -11,18 +11,12 @@ val init : unit -> unit
 (** Ensure the database is initialised (for unit-tests). *)
 
 val record :
-  repo:Repo_id.t ->
+  repo:Current_github.Repo_id.t ->
   hash:string ->
-  status:build_status ->
-  (string * Current.job_id option) list ->
+  (* status:build_status -> *)
+  (Current.job_id option) list ->
   unit
 (** [record ~repo ~hash jobs] updates the entry for [repo, hash] to point at [jobs]. *)
-
-val get_jobs : owner:string -> name:string -> string -> (string * job_state) list
-(** [get_jobs ~owner ~name commit] is the last known set of OCurrent jobs for hash [commit] in repository [owner/name]. *)
-
-val get_job : owner:string -> name:string -> hash:string -> variant:string -> (string option, [> `No_such_variant]) result
-(** [get_job ~owner ~name ~variant] is the last known job ID for this combination. *)
 
 val get_job_ids: owner:string -> name:string -> hash:string -> string list
 
