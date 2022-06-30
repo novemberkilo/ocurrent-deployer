@@ -160,20 +160,25 @@ module Cluster = struct
 
   (* Build [src/dockerfile] as a Docker service. *)
   let build { sched; dockerfile; options; archs } ?(additional_build_args=Current.return []) repo src : unit Current.t =
+    Logs.info (fun f -> f "In build");
     let src' = Current.map (fun x -> [x]) src in
-    let* src = src in
-    let hash = Current_git.Commit_id.hash src in
+    Logs.info (fun f -> f "In build 2");
     Current.component "HEADs" |>
     let** additional_build_args = additional_build_args in
     let options = { options with build_args = additional_build_args @ options.build_args } in
     let build_arch arch = 
-      let build = Current_ocluster.build sched ~options ~pool:(pool_id arch) ~src:src' dockerfile
-      in 
+      Logs.info (fun f -> f "In build_arch");
+      let build = Current_ocluster.build sched ~options ~pool:(pool_id arch) ~src:src' dockerfile in
+      let* src = src in
+      let () = Logs.info (fun f -> f "In build 3") in
+      let hash = Current_git.Commit_id.hash src in
+      let () = Logs.info (fun f -> f "archs: %d repo: %s hash: %s" (List.length archs) (Fmt.str("%s/%s") repo.Github.Repo_id.owner repo.name) hash) in
       let+ job_id = get_job_id build in
-      Index.record ~repo ~hash [job_id];
       let job_str = match job_id with | Some x -> x | None -> "None" in
-      Logs.info (fun f -> f "Recording repo: %s hash: %s job: %s" (Fmt.str("%s/%s") repo.owner repo.name) hash job_str)
+      let () = Logs.info (fun f -> f "Recording repo: %s hash: %s job: %s" (Fmt.str("%s/%s") repo.owner repo.name) hash job_str) in
+      Index.record ~repo ~hash [("build", job_id)]
     in
+    Logs.info (fun f -> f "archs: %d" (List.length archs));
     Current.all (List.map build_arch archs) 
 
   let name info = Cluster_api.Docker.Image_id.to_string info.hub_id
@@ -277,6 +282,7 @@ let build_kit (v : Cluster_api.Docker.Spec.options) = { v with buildkit = true }
    For each build, it says which which branch gives the desired live version of
    the service, and where to deploy it. *)
 let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
+  Logs.info (fun f -> f "Helloo from tarides!");
   (* [web_ui collapse_value] is a URL back to the deployment service, for links
      in status messages. *)
   let web_ui =
@@ -286,6 +292,7 @@ let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
   let tarides = Build.org ?app ~account:"tarides" 21197588 in
   let ocurrent = Build.org ?app ~account:"ocurrent" 12497518 in
   let ocaml_bench = Build.org ?app ~account:"ocaml-bench" 19839896 in
+  let novemberkilo = Build.org ?app ~account:"novemberkilo" 25429083 in
 
   let build (org, name, builds) = Cluster_build.repo ?channel ~web_ui ~org ~name builds in
   let sched_regular = Current_ocluster.v ~timeout ?push_auth:staging_auth sched in
@@ -293,6 +300,9 @@ let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
   let docker = docker ~sched:sched_regular in
 
   Current.all @@ List.map build @@ filter_list filter [
+    novemberkilo, "ocaml-ci", [
+      docker "Dockerfile"     ["master", "novemberkilo/ocaml-ci-service:live", [`Toxis "ocaml-ci_ci"]] ~archs:[`Linux_x86_64];
+    ];
     ocurrent, "ocurrent-deployer", [
       docker "Dockerfile"     ["live-ci3",   "ocurrent/ci.ocamllabs.io-deployer:live-ci3",   [`Ci3 "deployer_deployer"]];
       docker "Dockerfile"     ["live-toxis", "ocurrent/ci.ocamllabs.io-deployer:live-toxis", [`Toxis "infra_deployer"]];

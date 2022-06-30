@@ -58,14 +58,16 @@ module Make(T : S.T) = struct
     | Error (`Msg m)    -> Github.Api.CheckRunStatus.v ~url (`Completed (`Failure m)) ~summary:m
 
   let repo ?channel ~web_ui ~org:(org, github) ?additional_build_args ~name build_specs =
+    Logs.info (fun f -> f "Helloo from repo.");
     let repo_name = Printf.sprintf "%s/%s" org name in
     let repo = { Github.Repo_id.owner = org; name } in
     let root = Current.return ~label:repo_name () in      (* Group by repo in the diagram *)
     Current.with_context root @@ fun () ->
     let builds =
       match github with
-      | None -> []
+      | None -> Logs.info (fun f -> f "Sad None"); []
       | Some github ->
+        Logs.info (fun f -> f "Happy Some");
         let refs = Github.Api.ci_refs github repo in
         let collapse_value = repo_name ^ "-builds" in
         let url = web_ui collapse_value in
@@ -74,7 +76,7 @@ module Make(T : S.T) = struct
           |> Current.list_iter (module Github.Api.Commit) @@ fun commit ->
           let src = Current.map Github.Api.Commit.id commit in
           Current.all (
-            build_specs |> List.map (fun (build_info, _deploys) -> T.build ?additional_build_args build_info repo src |> Current.ignore_value)
+            build_specs |> List.map (fun (build_info, _deploys) -> Logs.info (fun f -> f "Calling build"); T.build ?additional_build_args build_info repo src |> Current.ignore_value)
           )
           |> status_of_build ~url
           |> Github.Api.CheckRun.set_status commit "deployability"
@@ -91,7 +93,7 @@ module Make(T : S.T) = struct
                  deploys |> List.map (fun (branch, deploy_info) ->
                     let service = T.name deploy_info in
                     let commit, src = head_of ?github repo branch in
-                    let deploy = T.deploy build_info deploy_info ?additional_build_args src in
+                    let deploy = Logs.info (fun f -> f "Calling deploy"); T.deploy build_info deploy_info ?additional_build_args src in
                     match channel, commit with
                     | Some channel, Some commit -> notify ~channel ~web_ui ~service ~commit ~repo:repo_name deploy
                     | _ -> deploy

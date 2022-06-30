@@ -15,6 +15,7 @@ let read_first_line path =
     ~finally:(fun () -> close_in ch)
 
 let main () config mode app sched staging_password_file repo flavour =
+  Logs.info (fun f -> f "Is this thing on?");
   let filter = Option.map (=) repo in
   let vat = Capnp_rpc_unix.client_only_vat () in
   let sched = Current_ocluster.Connection.create (Capnp_rpc_unix.Vat.import_exn vat sched) in

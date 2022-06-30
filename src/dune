@@ -44,5 +44,5 @@
    str
    lwt
    lwt.unix)
- (modules index repo_id pipeline caddy logging mirage s build)
+ (modules index pipeline caddy logging mirage s build)
  (preprocess (pps ppx_deriving.std ppx_deriving_yojson)))
