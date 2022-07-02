@@ -98,7 +98,7 @@ let main () config mode app slack auth staging_password_file flavour =
   in
   let routes =
     Routes.(s "login" /? nil @--> Current_github.Auth.login auth) ::
-    Routes.(s "webhooks" / s "github" /? nil @--> Current_github.webhook ~engine ~webhook_secret ~has_role) ::
+    Routes.(s "webhooks" / s "github" /? nil @--> Current_github.webhook ~engine ~get_job_ids:Index.get_job_ids ~webhook_secret ~has_role) ::
     Current_web.routes engine in
   let site = Current_web.Site.v ?authn ~has_role ~name:"OCurrent Deployer" routes in
   Logging.run begin

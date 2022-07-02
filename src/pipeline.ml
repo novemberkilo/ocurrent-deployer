@@ -292,7 +292,7 @@ let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
   let tarides = Build.org ?app ~account:"tarides" 21197588 in
   let ocurrent = Build.org ?app ~account:"ocurrent" 12497518 in
   let ocaml_bench = Build.org ?app ~account:"ocaml-bench" 19839896 in
-  let novemberkilo = Build.org ?app ~account:"novemberkilo" 25429083 in
+  let novemberkilo = Build.org ?app ~account:"novemberkilo" 26979279 in
 
   let build (org, name, builds) = Cluster_build.repo ?channel ~web_ui ~org ~name builds in
   let sched_regular = Current_ocluster.v ~timeout ?push_auth:staging_auth sched in
